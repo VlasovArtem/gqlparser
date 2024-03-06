@@ -2,6 +2,7 @@ package gqlerror
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -60,6 +61,20 @@ func (err *Error) Error() string {
 	}
 
 	res.WriteString(err.Message)
+
+	extensions := err.Extensions
+
+	if len(extensions) == 0 {
+		extensions = map[string]interface{}{"message": "no details"}
+	}
+
+	jsonDetails, marshalErr := json.Marshal(extensions)
+	if marshalErr != nil {
+		jsonDetails = []byte(fmt.Sprintf(`{"message":"%s"}`, fmt.Sprintf("error marshalling extensions: %s", marshalErr.Error())))
+	}
+
+	res.WriteString(". Details:")
+	res.Write(jsonDetails)
 
 	return res.String()
 }
