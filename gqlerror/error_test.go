@@ -34,21 +34,41 @@ func TestErrorFormatting(t *testing.T) {
 	t.Run("without filename", func(t *testing.T) {
 		err := ErrorLocf("", 66, 2, "kabloom")
 
-		require.Equal(t, `input:66: kabloom`, err.Error())
+		require.Equal(t, `input:66: kabloom. Details:{"message":"no details"}`, err.Error())
 		require.Equal(t, nil, err.Extensions["file"])
 	})
 
 	t.Run("with filename", func(t *testing.T) {
 		err := ErrorLocf("schema.graphql", 66, 2, "kabloom")
 
-		require.Equal(t, `schema.graphql:66: kabloom`, err.Error())
+		require.Equal(t, `schema.graphql:66: kabloom. Details:{"file":"schema.graphql"}`, err.Error())
 		require.Equal(t, "schema.graphql", err.Extensions["file"])
 	})
 
 	t.Run("with path", func(t *testing.T) {
 		err := ErrorPathf(ast.Path{ast.PathName("a"), ast.PathIndex(1), ast.PathName("b")}, "kabloom")
 
-		require.Equal(t, `input: a[1].b kabloom`, err.Error())
+		require.Equal(t, `input: a[1].b kabloom. Details:{"message":"no details"}`, err.Error())
+	})
+
+	t.Run("with additional details", func(t *testing.T) {
+		err := &Error{
+			Message:    "kabloom",
+			Locations:  []Location{{Line: 66, Column: 2}},
+			Extensions: map[string]interface{}{"foo": "bar"},
+		}
+
+		require.Equal(t, `input:66: kabloom. Details:{"foo":"bar"}`, err.Error())
+	})
+
+	t.Run("with invalid additional details", func(t *testing.T) {
+		err := &Error{
+			Message:    "kabloom",
+			Locations:  []Location{{Line: 66, Column: 2}},
+			Extensions: map[string]interface{}{"foo": new(chan int)},
+		}
+
+		require.Equal(t, `input:66: kabloom. Details:{"message":"error marshalling extensions: json: unsupported type: chan int"}`, err.Error())
 	})
 }
 
